@@ -204,13 +204,8 @@ def td3(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         o, a, r, o2, d = data['obs'], data['act'], data['rew'], data['obs2'], data['done']
 
         # Q-values
-        #######################
-        #                     #
-        #   YOUR CODE HERE    #
-        #                     #
-        #######################
-        # q1 = 
-        # q2 = 
+        q1 = ac.q1(o, a)
+        q2 = ac.q2(o, a)
 
         # Target policy smoothing
         #######################
@@ -218,6 +213,10 @@ def td3(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
+        with torch.no_grad():
+            target_policy = ac_targ.pi(o2)
+            epsilon = torch.clamp(torch.randn_like(target_policy) * target_noise, -noise_clip, noise_clip)
+            a2 = torch.clamp(target_policy + epsilon, -act_limit, act_limit)
 
         # Target Q-values
         #######################
@@ -225,6 +224,9 @@ def td3(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
+        with torch.no_grad():
+            target_q = torch.min(ac_targ.q1(o2, a2), ac_targ.q2(o2, a2))
+            target = r + (1 - d) * gamma * target_q
 
         # MSE loss against Bellman backup
         #######################
@@ -232,9 +234,7 @@ def td3(env_fn, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
-        # loss_q1 = 
-        # loss_q2 = 
-        # loss_q = 
+        loss_q = ((q1 - target) ** 2).mean() + ((q2 - target) ** 2).mean()
 
         # Useful info for logging
         loss_info = dict(Q1Vals=q1.detach().numpy(),
